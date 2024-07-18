@@ -12,7 +12,7 @@ export default function Home() {
 
     const client = createPublicClient({
       chain: mainnet,
-      transport: http(`https://mainnet.infura.io/v3/381bfebfafac44e48a185f69401bc416`),
+      transport: http(`https://mainnet.infura.io/v3/your_api_key`),
     });
 
     const getBlockInfo = async () => {
