@@ -1,94 +1,63 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client'
+import { useEffect, useState } from "react";
+import { createPublicClient, http, parseAbiItem } from "viem";
+import { mainnet } from "viem/chains";
 
 export default function Home() {
+  const [log, setLog] = useState<any | null>();
+  const [blockNumber, setBlockNumber] = useState<number | null>();
+  const [blockHash, setBlockHash] = useState<string | null>();
+
+  useEffect(() => {
+
+    const client = createPublicClient({
+      chain: mainnet,
+      transport: http(`https://mainnet.infura.io/v3/381bfebfafac44e48a185f69401bc416`),
+    });
+
+    const getBlockInfo = async () => {
+      const block = await client.getBlock({ blockTag: 'latest' });
+      setBlockNumber(Number(block.number));
+      setBlockHash(block.hash);
+    }
+
+    const subscribeEvent = async () => {
+      client.watchBlocks({
+        onBlock: async(block) => {
+
+          const fromBlock = Number(block.number) - 200;
+          const toBlock = Number(block.number) - 100;
+
+          const logs = await client.getLogs({
+            address: '0xdac17f958d2ee523a2206206994597c13d831ec7',
+            event: parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)'),
+            fromBlock: BigInt(fromBlock),
+            toBlock: BigInt(toBlock)
+          });
+
+          const logEntry = logs.map(log => {
+            const { from, to, value } = log.args;
+            return `Block:${log.blockNumber}(hash:${log.blockHash}): transfer from ${from} to ${to} with ${value} USDT\n`
+          })
+
+          setBlockNumber(Number(block.number));
+          setBlockHash(block.hash);
+          setLog(logEntry)
+        }
+      })
+    }
+
+    getBlockInfo();
+    subscribeEvent();
+  }, [])
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <main>
+      <div>
+        The latest block number is : {blockNumber}, hash is {blockHash}.
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+      <div>
+        {log}
       </div>
     </main>
   );
